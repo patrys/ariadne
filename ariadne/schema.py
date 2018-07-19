@@ -1,19 +1,25 @@
-from graphql import GraphQLObjectType, GraphQLScalarType, GraphQLSchema, parse
-from graphql.utils.build_ast_schema import build_ast_schema
+from graphql import (
+    GraphQLSchema,
+    GraphQLObjectType,
+    GraphQLScalarType,
+    build_ast_schema,
+    parse,
+)
 
 from .default_resolver import default_resolver
 
 
-def build_schema(schema_description: str) -> GraphQLSchema:
-    ast_schema = parse(schema_description)
-    return build_ast_schema(ast_schema)
+def make_executable_schema(typedefs: str, resolvers: dict) -> GraphQLSchema:
+    ast_schema = parse(typedefs)
+    schema = build_ast_schema(ast_schema)
+    attach_field_resolvers(schema, resolvers)
+    return schema
 
 
-def make_executable_schema(schema: GraphQLSchema, resolvers: dict) -> GraphQLSchema:
+def attach_field_resolvers(schema: GraphQLSchema, resolvers: dict) -> None:
     for type_name, type_object in schema.get_type_map().items():
         if isinstance(type_object, GraphQLScalarType):
             serializer = resolvers.get(type_name, type_object.serialize)
-            print(type_name, serializer)
             type_object.serialize = serializer
         if isinstance(type_object, GraphQLObjectType):
             type_resolver = resolvers.get(type_name, {})
